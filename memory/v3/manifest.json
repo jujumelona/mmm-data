@@ -1,0 +1,21 @@
+{
+  "failure_policy": "remote-failure-requires-objective-verifier-failure",
+  "format_version": "v3",
+  "privacy_policy": "sanitized-structural-verifier-evidence-only",
+  "schema_version": "mmm/trajectory-store-manifest-v1",
+  "shard_pattern": "memory/v3/{task_class}.jsonl",
+  "storage": "jsonl-sharded-by-task-class",
+  "success_policy": "remote-success-requires-L3-or-higher",
+  "task_classes": [
+    "repair",
+    "generation",
+    "build",
+    "runtime",
+    "quality",
+    "research",
+    "planning",
+    "release",
+    "general"
+  ],
+  "trajectory_schema": "mmm/verified-trajectory-v3"
+}
