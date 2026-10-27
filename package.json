@@ -1,0 +1,15 @@
+{
+  "name": "inochi2d-ai-rigging",
+  "version": "0.4.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node src/cli.mjs mesh-check examples/mesh.json",
+    "providers": "node src/cli.mjs providers",
+    "checkout-preview": "node src/source-checkout.mjs --all --dest ./third_party --dry-run",
+    "test:native": "python -m unittest discover -s native -p test_*.py -v"
+  }
+}

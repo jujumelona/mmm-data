@@ -1,19 +1,49 @@
-# Inochi2D-AI-Rigging
+# Inochi2D-AI-Rigging — 한국어 사용 안내
 
-기존 `mmm-data` 공개 저장소를 재활용한 **독립 Inochi2D AI 자동 리깅 프로젝트**입니다. M.M.M 데이터 저장소 기능과는 분리되었습니다.
+이 저장소는 **단순 MCP 서버가 아니라 Inochi2D 0.8 제작 보조 엔진 + 안전한 AI 편집 인터페이스 + CLI + 선택적 MCP 서버**다. 현재 완성형 자동 리깅 프로그램은 **아니다**.
 
-**현재 GitHub 공개본은 0.8 INP/INX 파일의 읽기·구조 검사 및 테스트를 수행하는 초기 부트스트랩입니다.**
-자동 메시·자동 리깅·고급 키폼·MCP·Creator 실시간 편집을 완성했다고 주장하지 않습니다.
-별도로 제작된 개발용 v0.4 코드 패키지는 단계적으로 이 저장소에 통합해야 합니다.
+### 실제 가능한 것
 
-목표: 공식 자동 메시 생성 활용 → 파츠·랜드마크·회전 중심·부모 좌표계 검증 → 비강체 키폼 최적화 → Creator 실렌더 검증 → AI 반복 수정 → 편집 가능한 최종 모델.
-정점·폴리곤·작업량에는 인위적인 상한을 두지 않으며 품질을 최우선으로 합니다.
+- 기존 `.inx/.inp` 모델 구조 분석 및 원본 보존형 파일 쓰기
+- 정점·삼각형·개별 변형 키폼 기하 검사
+- 원화 픽셀 좌표/모델 좌표/회전 중심/관절 위치를 GUID와 SHA-256으로 묶어 전달
+- 3개 이상의 비공선 랜드마크를 이용한 비강체(TPS) 변형 키폼 후보 생성
+- 이미 존재하는 파라미터/메시/바인딩의 비어 있는 키폼만 수정 제안
+- Creator를 별도 패치한 경우 노드·파라미터를 조회하는 MCP 연결
 
-```bash
+### 아직 구현하지 않은 것
+
+PSD를 넣으면 수백 개 파츠가 완전 자동 리깅되는 기능, 수만 정점 최적화, 고급 물리 자동 구성, 실제 Creator 기반 AI 시각 평가 루프, 기준점 이동에 따른 전 계층·바인딩 자동 보정, 전문 리거 품질 우위 입증. **이 기능들을 구현한 척하지 않는다.**
+
+### 실행
+
+```powershell
+cd Inochi2D-AI-Rigging
 python -m pip install -e .
-inochi-rig inspect model.inx
-python -m unittest discover -s tests -v
+python -m unittest discover -s tests -p test_*.py -v
+python -m unittest discover -s native -p test_*.py -v
+npm test
+python -m rigging.cli --help
+python -m rigging.cli inspect "C:\\Models\\your-model.inx"
 ```
 
-**원화, 사용자 비공개 캐릭터 자산, AIRI 비공개 코드는 포함하지 않습니다.**
-GitHub 저장소 주소는 관리자 설정에서 이름을 변경하기 전까지 `mmm-data`로 유지됩니다.
+MCP는 추가 설치 후 `python -m rigging.mcp_server`로 실행한다.
+
+```powershell
+python -m pip install -e ".[mcp]"
+python -m rigging.mcp_server
+```
+
+Creator 화면 직접 제어는 [inochi-creator-mcp](https://github.com/ozekimasaki/inochi-creator-mcp)를 별도로 설치하고 Inochi Creator `v0_8`의 수정 빌드를 실행해야 한다. 공식 배포 바이너리에는 이 제어 인터페이스가 없다. 외부 HTTP 브리지는 기본적으로 `127.0.0.1:17320`만 사용한다.
+
+**안전 규칙:** 작업 원본을 덮어쓰지 않으며, 좌표 단위·기준점·부모 GUID가 빠지면 수정하지 않는다. 미리 제작한 키폼은 승인 없이 덮어쓰지 않는다. 정식 Creator 및 실제 렌더링 QA 없이는 고급 리깅 완료라고 표시하지 않는다.
+
+### 공개 저장소 생성
+
+현재 연결된 GitHub 도구에는 **새 저장소 생성 기능이 없으므로**, 프로젝트를 준비하더라도 자동으로 공개 저장소를 생성했다고 말할 수 없다. 별도 ZIP의 프로젝트 루트에서, PC에 Git과 GitHub CLI를 설치하고 `gh auth login`으로 로그인한 뒤:
+
+```bash
+bash scripts/publish_public.sh --confirm-public
+```
+
+현재 공개 저장소는 `jujumelona/mmm-data`이며 내부 프로젝트 이름은 `Inochi2D-AI-Rigging`입니다. 저장소 이름 변경은 GitHub Settings > General에서 할 수 있습니다. 배포 스크립트는 새 저장소를 생성하지 않습니다.

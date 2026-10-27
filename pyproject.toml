@@ -4,13 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "inochi2d-ai-rigging"
-version = "0.1.0"
-description = "Inochi2D rigging model inspector and future AI-rigging toolkit"
+version = "0.4.0"
+description = "Quality-gated Inochi2D 0.8 rigging research tools, CLI and optional MCP interface"
 requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
 license = {text = "MIT"}
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.10"]
 
 [project.scripts]
 inochi-rig = "rigging.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["rigging*"]
+include = ["rigging*", "native*"]

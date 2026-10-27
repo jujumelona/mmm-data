@@ -1,41 +1,81 @@
 # Inochi2D-AI-Rigging
 
-Open-source **Inochi2D rig-authoring and validation toolkit**. This repository has been repurposed from its former MMM data-store role. **It is not an MMM trajectory store.**
+Independent, open-source **Inochi2D 0.8 rig-authoring and quality-gate research toolkit** with a CLI, a separately installable MCP endpoint, and a guarded interface to a patched Inochi Creator. It is **not** a finished professional auto-rigger or a Creator replacement.
 
-## Current public bootstrap
+## Status: working versus missing
 
-- A standalone, dependency-free Inochi2D 0.8 INP/INX **read-only inspector**.
-- Structural checks for model payloads, texture sections, node/triangle counts, and malformed files.
-- CLI and unit tests.
-- Detailed roadmap and compatibility boundaries for eventual **full AI-assisted editing, rigging, pivot preservation, keyforms, rendering, Creator bridge and MCP**.
+| Feature | Status |
+| --- | --- |
+| INP1 `.inp`/`.inx` read, inspect, strictly gated keyform output | **Implemented** — Inochi2D 0.8 only |
+| Preserve existing model's texture/extension bytes during approved edits | **Implemented, synthetic tests** |
+| Mesh geometry, parameter samples and motion diagnostics | **Implemented on supplied geometry/samples** |
+| Explicit image-pixel ↔ mesh-local landmark conversion | **Implemented** — requires measured calibration |
+| Parent-chain fingerprints, model SHA, joint/rotation anchor provenance | **Implemented** |
+| World/local transform and 2D reparent plan | **Implemented on supported planar frames** — refuses root-locked and shear cases |
+| Nonuniform **TPS** landmark-driven deform-keyform proposal | **Implemented** — existing mesh, parameter and binding only |
+| Thin optional MCP server wrapping the same core as CLI | **Implemented, needs `mcp` package to start** |
+| Optional HTTP adapter to `ozekimasaki/inochi-creator-mcp` live Creator bridge | **Implemented on the documented RPC contract; no live Creator E2E verified** |
+| PSD → full high-quality rig, alpha-adaptive AutoMesh replacement | **Not implemented** |
+| Automatic world-preserving pivot relocation inside Creator | **Not implemented** — intentionally safety-blocked |
+| Rig quality greater than professional Inochi2D Creator authoring | **Not demonstrated** |
+| Real Creator renderer + visual AI optimization and output acceptance | **Not implemented** |
+| INP2/0.9 models | **Not implemented / refused** |
 
-**Status:** Early public bootstrap. Do **not** mistake this source for a finished AI autorigger or for the complete v0.4 development archive. Real-model render/quality verification remains outstanding.
+No character art, private models, original vendor code or model weights are bundled.
 
 ## Quick start
 
 ```bash
 python -m pip install -e .
-inochi-rig inspect /path/to/model.inx
-python -m unittest discover -s tests -v
+python -m unittest discover -s native -p 'test_*.py' -v
+python -m unittest discover -s tests -p 'test_*.py' -v
+npm test
+python -m rigging.cli --help
+python -m rigging.cli inspect PATH_TO_EXISTING_0_8_MODEL.inx
 ```
 
-## Project architecture and source migration
+For an MCP client:
 
-The full v0.4 development package with experimental rigging, safe anchor contracts, constrained keyform proposals, Python/JS tests and optional MCP adapter exists separately; these features **have not yet all been migrated into this public repository**.
-
-The ultimate design is independent of AIRI:
-```text
-Inochi2D-AI-Rigging
-├── file / scene authoring core
-├── accurate coordinate / landmark / pivot handoff
-├── adaptive mesh / facial and articulated-body autorig
-├── saved parameter + keyform editing
-├── rendering + visual QA + rollback
-└── CLI / API / optional MCP
+```bash
+python -m pip install -e '.[mcp]'
+python -m rigging.mcp_server
 ```
 
-No RE:ARCHIVE character assets, private AIRI code or previous MMM memory are published here.
+Example client configuration for a local stdio MCP client:
 
-Inochi2D and Inochi Creator are separately maintained projects. This repository is not affiliated with the Inochi2D Project. See [docs/EXTERNAL_MCP_AUDIT.md](docs/EXTERNAL_MCP_AUDIT.md) and [README_KO.md](README_KO.md).
+```json
+{
+  "mcpServers": {
+    "inochi-ai-rigging": {
+      "command": "python",
+      "args": ["-m", "rigging.mcp_server"]
+    }
+  }
+}
+```
 
-License: MIT (original code only).
+A **separate patched Creator 0.8 build** is needed for `creator_*` methods. This project does *not* silently patch or launch Creator. Read `docs/EXTERNAL_MCP_AUDIT.md`.
+
+## Rigging workflow
+
+1. Import prepared artwork with official Creator/AutoMesh. Save an editable `.inx` 0.8 project.
+2. Use `rig_inspect` / `inochi-rig inspect` to list actual nodes, mesh sizes, parameter GUIDs, and animation names.
+3. For every landmark/pivot, create a manifest with exact `source_sha256`, `node_guid`, `mesh_sha256`, `lineage_sha256`, image→mesh coordinate calibration, and both image and local coordinates. **Do not infer Y direction, pivot, or scale.**
+4. Use `rig_validate_anchors` and `rig_propose_keyform` to produce safe nonrigid candidates only for an **existing** mesh and un-authored parameter binding keyform.
+5. Use `rig_apply_approved_plan` with explicit acknowledgement to write a **different file**. The writer refuses overwrite, stale original, triangle flips, and keys already authored.
+6. **Open in the actual Creator**, inspect the 9 directions, edge seams, occlusion, eyebrow/mouth identity, and animations. This project currently does not execute the Creator renderer or establish artistic improvement.
+7. Keep the official Creator result when the candidate does not *demonstrably* improve the appearance.
+
+### Landmark-to-pivot handoff rule
+
+A joint landmark in mesh-local coordinates is **not** automatically the node's pivot. The latter is the local origin `[0,0]`, inherited through transforms. `rigging.spaces.pivot_handoff` reports them separately, including parent GUID, measured model-world coordinates, and whether they coincide. An actual pivot relocation must also update mesh positions, children, bound keyforms and tracking/physics effects as needed, and is deliberately **not automatically applied** here.
+
+## Extensions & acknowledgements
+
+Existing MCP systems were inspected for their *protocols and boundaries*. This repository does **not** vendor their code:
+- [inochi-creator-mcp](https://github.com/ozekimasaki/inochi-creator-mcp) — patched Creator RPC, GUI/nodes/parameters/viewport; no mesh vertex/binding modification.
+- [inochi2d-toolkit](https://github.com/yanjingzhaisun/inochi2d-toolkit) — INP read/verify/texture extraction; no finished auto-rigger.
+
+Inochi2D and Creator are separate projects, generally BSD-2-Clause. See `docs/EXTERNAL_MCP_AUDIT.md` for precise compatibility. Other registered GitHub projects are discovery references, **not integrated engines**. Follow their original licenses before copying code.
+
+This project is not affiliated with the Inochi2D Project or either MCP author.

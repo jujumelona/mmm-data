@@ -1,0 +1,1 @@
+{"loop":true,"parameterRanges":{"AngleX":[-30,30]},"canvas":[100,100],"frames":[{"t":0,"parameters":{"AngleX":0},"points":{"hand":[50,60]}},{"t":0.5,"parameters":{"AngleX":20},"points":{"hand":[60,50]}},{"t":1,"parameters":{"AngleX":0},"points":{"hand":[50,60]}}]}

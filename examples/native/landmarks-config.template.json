@@ -1,0 +1,17 @@
+{
+  "parameter": "Head:: Angle",
+  "strength": 0.5,
+  "landmarks": {
+    "face": [100, 90],
+    "leftEye": [80, 75],
+    "rightEye": [120, 75],
+    "nose": [100, 97],
+    "mouth": [100, 114],
+    "chin": [100, 150]
+  },
+  "node_roles": {
+    "face": "REPLACE_WITH_ACTUAL_INOCHI_MESH_NODE_GUID",
+    "leftEye": "REPLACE_WITH_ACTUAL_LEFT_EYE_MESH_NODE_GUID",
+    "rightEye": "REPLACE_WITH_ACTUAL_RIGHT_EYE_MESH_NODE_GUID"
+  }
+}
