@@ -38,12 +38,10 @@ Creator 화면 직접 제어는 [inochi-creator-mcp](https://github.com/ozekimas
 
 **안전 규칙:** 작업 원본을 덮어쓰지 않으며, 좌표 단위·기준점·부모 GUID가 빠지면 수정하지 않는다. 미리 제작한 키폼은 승인 없이 덮어쓰지 않는다. 정식 Creator 및 실제 렌더링 QA 없이는 고급 리깅 완료라고 표시하지 않는다.
 
-### 공개 저장소 생성
+### 공개 GitHub 저장소
 
-현재 연결된 GitHub 도구에는 **새 저장소 생성 기능이 없으므로**, 프로젝트를 준비하더라도 자동으로 공개 저장소를 생성했다고 말할 수 없다. 별도 ZIP의 프로젝트 루트에서, PC에 Git과 GitHub CLI를 설치하고 `gh auth login`으로 로그인한 뒤:
+현재 소스 44개 파일을 기존 공개 저장소 [jujumelona/mmm-data](https://github.com/jujumelona/mmm-data)에 업로드했습니다. 데이터 저장소로 사용하던 파일은 현재 main 브랜치에서 제거했고, M.M.M의 기본 연결도 끊었습니다.
 
-```bash
-bash scripts/publish_public.sh --confirm-public
-```
+현재 **저장소 주소는 아직 `mmm-data`**입니다. 필요하면 GitHub 저장소 **Settings → General → Repository name**에서 `Inochi2D-AI-Rigging`으로 변경할 수 있습니다. 저장소 URL 이름만 바뀌며, 프로그램 기능에는 영향을 주지 않습니다.
 
-현재 공개 저장소는 `jujumelona/mmm-data`이며 내부 프로젝트 이름은 `Inochi2D-AI-Rigging`입니다. 저장소 이름 변경은 GitHub Settings > General에서 할 수 있습니다. 배포 스크립트는 새 저장소를 생성하지 않습니다.
+새 저장소를 만들 필요는 없습니다. 수정 사항은 이 저장소 main 브랜치에 커밋하면 됩니다. `scripts/publish_public.sh` 역시 새 저장소를 생성하지 않고 현재 저장소 위치만 안내합니다.
