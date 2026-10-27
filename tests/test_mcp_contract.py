@@ -8,7 +8,6 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from test_rigging import specimen
 
@@ -21,13 +20,22 @@ class FakeMCP:
 class TestMCP(unittest.TestCase):
     def setUp(self):
         mcp=types.ModuleType('mcp');server=types.ModuleType('mcp.server');fast=types.ModuleType('mcp.server.fastmcp');fast.FastMCP=FakeMCP
-        self.ctx=patch.dict(sys.modules,{'mcp':mcp,'mcp.server':server,'mcp.server.fastmcp':fast})
-        self.ctx.start()
+        # Patch only the MCP module entries: restoring all sys.modules would
+        # discard NumPy modules imported during this test and cause a C-extension
+        # reimport failure later in the same Python process.
+        fakes={'mcp':mcp,'mcp.server':server,'mcp.server.fastmcp':fast}
+        self._missing=object()
+        self._saved={key:sys.modules.get(key,self._missing) for key in fakes}
+        sys.modules.update(fakes)
         sys.modules.pop('rigging.mcp_server',None)
         self.server=importlib.import_module('rigging.mcp_server')
     def tearDown(self):
         sys.modules.pop('rigging.mcp_server',None)
-        self.ctx.stop()
+        for key,value in self._saved.items():
+            if value is self._missing:
+                sys.modules.pop(key,None)
+            else:
+                sys.modules[key]=value
 
     def test_tools_registered_and_not_promising_full_autorig(self):
         reg=self.server.mcp.registered
