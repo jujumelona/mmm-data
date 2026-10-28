@@ -4,7 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
-from native.inp08 import parse, inspect
+from native.inp08 import parse, inspect, atomic_write
 from .contracts import validate_manifest, make_anchor, FORMAT
 from .deform import propose_keyform
 from .handoff import manual_handoff, binding_vertex_slice
@@ -60,7 +60,7 @@ def main(argv=None):
                              json.loads(Path(a.config).read_text(encoding='utf8')))
         out=Path(a.out)
         if out.exists():p.error('refusing to overwrite output')
-        out.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf8')
+        atomic_write(out,json.dumps(data,ensure_ascii=False,indent=2).encode('utf8'))
         data={'saved_plan':str(out),'candidate_count':len(data['patches']),'model_unchanged':True}
     print(json.dumps(data,ensure_ascii=False,indent=2))
 

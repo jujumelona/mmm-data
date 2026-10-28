@@ -6,7 +6,7 @@ import json
 import math
 from pathlib import Path
 import sys
-from inp08 import read_model, extract_samples, inspect, FormatError
+from inp08 import read_model, extract_samples, inspect, FormatError, atomic_write
 from local_geometry import geometry_errors
 
 
@@ -38,8 +38,7 @@ def main():
         output=json.dumps(report,ensure_ascii=False,indent=2)
         if args.output:
             if args.output.exists():raise FormatError('refusing overwrite')
-            args.output.parent.mkdir(parents=True,exist_ok=True)
-            args.output.write_text(output,encoding='utf8')
+            atomic_write(args.output,output.encode('utf8'))
         else:print(output)
         if not report['geometryPass']:sys.exit(1)
     except (OSError,ValueError,TypeError) as e:

@@ -120,9 +120,28 @@ def main():
             plan=json.loads(args.plan.read_text(encoding="utf8"))
             if plan.get("format")!="inochi-authoring.keyform-plan.v1" or plan.get("source_sha256")!=hashlib.sha256(source).hexdigest():
                 raise FormatError("wrong format or stale plan")
-            if not plan.get("patches"):raise FormatError("no safe proposed changes")
+            if plan.get("status")!="CANDIDATE_ONLY":
+                raise FormatError("only candidate plans may be applied")
+            if not isinstance(plan.get("patches"),list) or not plan["patches"]:
+                raise FormatError("no safe proposed changes")
+            if args.output.suffix.lower() not in (".inp",".inx"):
+                raise FormatError("model output must be .inp or .inx")
             clone=copy.deepcopy(doc);results=[]
-            for patch in plan["patches"]:results.append(apply_keyform(clone,patch))
+            seen=set()
+            for patch in plan["patches"]:
+                if not isinstance(patch,dict) or set(patch)-{"parameter","parameter_guid","node_guid","key_index","vertex_offsets"}:
+                    raise FormatError("unsupported or privileged keyform patch fields")
+                key=(patch.get("parameter_guid",patch.get("parameter")),patch.get("node_guid"),str(patch.get("key_index")))
+                if key in seen:raise FormatError("duplicate keyform patch target")
+                seen.add(key)
+                results.append(apply_keyform(clone,patch))
+            # Legacy direct CLI cannot bypass full geometry quality checks.
+            # Enable core imports when this script is executed outside repo CWD.
+            sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+            from rigging.quality import inspect_geometry
+            quality=inspect_geometry(clone,include_pairs=True)
+            if not quality['individual_geometry_pass'] or not quality['additive_proxy_pair_pass']:
+                raise FormatError("unsafe authored keyforms or composite-pose geometry")
             updated=encode(clone,tail);reloaded,_,t=parse(updated)
             if reloaded!=clone or t!=tail:raise FormatError("roundtrip validation failed")
             atomic_write(args.output,updated)

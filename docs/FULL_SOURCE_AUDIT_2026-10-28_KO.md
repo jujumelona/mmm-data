@@ -23,3 +23,8 @@
 Creator 내부 정점/바인딩/피벗/마스크/물리 native edit, 실제 렌더 비교, 2D/3D 결합 자세 테스트, TTS viseme 통합, PSD/PNG 시맨틱 파츠 생성, 완전 자동 iterative art quality loop, Windows Creator 현장 테스트. 장기적으로 native bridge를 구현하고 공식 INP 0.8 예제들과 픽셀 비교 테스트가 필요하다.
 
 수정된 CI 통과는 **코드의 특정 안전성 보강**을 의미하며 **완벽**이나 **전문 리깅 품질 인증**을 의미하지 않는다.
+
+## 2차 전체 진입점 감사 — 레거시 CLI
+- native/autorig.py의 apply 명령이 변조된 계획에서 allow_replace 플래그를 그대로 하위 편집기에 넘겨 기존 키폼을 덮어쓸 수 있었다. 실제 중앙 키폼을 덮어쓰는 반례를 재현했다. 이제 키폼 화이트리스트·중복 대상·조합 기하 검사를 적용한다.
+- rigging/cli.py의 proposal 및 native/model_qa.py의 JSON 출력은 실행 전 exists 검사만 하고 write_text로 저장해 경쟁 조건에서 기존 데이터를 덮어쓸 수 있었다. 공통 atomic_write(no overwrite)로 수정.
+- 테스트: tests/test_alternate_writers.py, tests/test_comprehensive_review.py, tests/test_plan_commit_gate.py
