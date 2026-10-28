@@ -196,15 +196,17 @@ def extract_samples(document):
     return {"samples":samples,"warnings":errors,"note":"Individual parameter deformation only; does not include hierarchical deformer composition, physics or camera transforms."}
 
 
-def _binding(document, param_name: str, node_guid: str):
+def _binding(document, param_name: str | None, node_guid: str, *, parameter_guid: str | None = None):
     matches=[]
     for param in document.get("param", []):
-        if param.get("name")!=param_name:continue
+        if parameter_guid is not None:
+            if str(param.get("guid",param.get("uuid","")))!=str(parameter_guid):continue
+        elif param.get("name")!=param_name:continue
         for binding in param.get("bindings", []):
             if binding.get("node") == node_guid and binding.get("param_name") == "deform":
                 matches.append((param,binding))
     if len(matches)!=1:
-        raise FormatError(f"expected exactly one deformation binding for {param_name}/{node_guid}, got {len(matches)}")
+        raise FormatError(f"expected exactly one deformation binding for {parameter_guid or param_name}/{node_guid}, got {len(matches)}")
     return matches[0]
 
 
@@ -214,7 +216,10 @@ def apply_keyform(document, patch):
     Explicit opt-in can overwrite a pre-existing key only if source checksum
     matches, geometry passes and caller specifies --allow-replace.
     """
-    param,binding=_binding(document,patch["parameter"],patch["node_guid"])
+    if not (patch.get("parameter_guid") or patch.get("parameter")):
+        raise FormatError("parameter_guid or parameter name required")
+    param,binding=_binding(document,patch.get("parameter"),patch["node_guid"],
+                          parameter_guid=patch.get("parameter_guid"))
     axes=param.get("axis_points",[])
     if len(axes)!=2 or len(axes[0])!=len(binding["values"]) or len(axes[1])<1:
         raise FormatError("unsupported binding axes")
@@ -261,7 +266,8 @@ def atomic_write(path: Path, payload: bytes):
         t.write(payload)
         name=t.name
     try:
-        # Publish with atomic no-overwrite semantics: avoid os.replace race.
+        # Atomic no-overwrite publication. os.replace would overwrite a file
+        # created by another agent between the initial existence check and here.
         os.link(name,path)
     finally:
         if os.path.exists(name):os.unlink(name)

@@ -35,7 +35,7 @@ def load_model(path):
 @mcp.tool()
 def rig_status()->dict:
     """Clearly report available and unsupported capabilities."""
-    return {'version':'0.4.2','inp08_read_write':'implemented',
+    return {'version':'0.5.0','inp08_read_write':'implemented',
             'inspect_anchors_and_pivots':'implemented',
             'manual_handoff_and_paged_vertex_bindings':'implemented_file_state_only',
             'tps_existing_keyform_proposal':'implemented',
@@ -44,7 +44,10 @@ def rig_status()->dict:
             'auto_pivot_reparent_preserve_world':'NOT implemented',
             'psd_to_full_rig':'NOT implemented',
             'ai_visual_quality_or_render_loop':'NOT implemented',
-            'inp2_0_9_support':'NOT implemented'}
+            'inp2_0_9_support':'NOT implemented',
+            'transactional_inp08_batch_edit':'implemented_new_output_only',
+            'barycentric_mesh_subdivision':'implemented_rebases_all_vertex_deform_keyforms',
+            'single_and_pairwise_proxy_geometry_audit':'implemented_NOT_renderer'}
 
 @mcp.tool()
 def rig_inspect(path:str)->dict:
@@ -156,5 +159,39 @@ def creator_set_transform_guarded(uuid:str, expected_json:str, new_translation:l
     """Guarded live transform edit; translation/pivot relocation intentionally refused without compensation."""
     return set_node_transform_verified(uuid,expected=json.loads(expected_json),translation=new_translation,
                                        rotation=new_rotation,scale=new_scale)
+
+
+from rigging.live_qa import capture_pose_sweep
+
+@mcp.tool()
+def creator_capture_pose_sweep(parameter_uuid: str, poses: list[list[float]],
+                               acknowledge_live_mutations: bool=False)->dict:
+    """Capture real patched Creator viewport evidence with original parameter restoration; no images emitted."""
+    if not acknowledge_live_mutations:raise ValueError('explicit acknowledge_live_mutations required')
+    return capture_pose_sweep(parameter_uuid,poses)
+
+# ---- Atomic offline editing and geometry verification (same core as CLI). ----
+from rigging.transactions import execute_transaction
+from rigging.quality import inspect_geometry
+
+@mcp.tool()
+def rig_geometry_audit(path: str, include_pairs: bool=True)->dict:
+    """Check authored single and pairwise additive-proxy deformation geometry; never claim a render pass."""
+    _,doc,_=load_model(path)
+    return inspect_geometry(doc,include_pairs=include_pairs)
+
+@mcp.tool()
+def rig_preview_transaction(path: str, batch_path: str, strict_pairs: bool=False)->dict:
+    """Apply batch in memory, reject stale source or unsafe geometry; never write model."""
+    batch=json.loads(Path(batch_path).read_text(encoding='utf8'))
+    return execute_transaction(path,batch,commit=False,strict_pairs=strict_pairs)
+
+@mcp.tool()
+def rig_commit_transaction(path: str, batch_path: str, out_path: str,
+                           human_approved: bool=False)->dict:
+    """Requires explicit approval, checks revision/geometry, writes ONE new INP/INX file atomically."""
+    if not human_approved:raise ValueError('human_approved is required for model output')
+    batch=json.loads(Path(batch_path).read_text(encoding='utf8'))
+    return execute_transaction(path,batch,destination=out_path,commit=True,strict_pairs=True)
 
 if __name__=='__main__':mcp.run()

@@ -2,6 +2,8 @@
 
 이 저장소는 **단순 MCP 서버가 아니라 Inochi2D 0.8 제작 보조 엔진 + 안전한 AI 편집 인터페이스 + CLI + 선택적 MCP 서버**다. 현재 완성형 자동 리깅 프로그램은 **아니다**.
 
+**v0.5.0 추가:** 여러 작업을 한 번에 검사/새 파일로 저장하는 트랜잭션, 공유 모서리의 정확한 정점·UV·기존 keyform 세분화, 실제 Creator viewport 증거 수집(패치된 Creator 필요), 2개 파라미터 조합의 보수적 기하 안전 검사. 사용법과 한계: `docs/TRANSACTIONS_LIVE_QA_KO.md`.
+
 ### 실제 가능한 것
 
 - 기존 `.inx/.inp` 모델 구조 분석 및 원본 보존형 파일 쓰기
@@ -12,6 +14,10 @@
 - Creator를 별도 패치한 경우 노드·파라미터를 조회하는 MCP 연결
 - `rig_manual_handoff`: GUID·부모·메시·UV·파라미터/키폼·마스크·텍스처 원본 참조를 실제 저장 파일에서 조회
 - `rig_binding_vertex_slice`: 수만 정점 모델에서도 필요한 키폼의 정점·UV·변위만 구간별 조회
+
+- 원본을 덮어쓰지 않는 원자적 배치 편집: `rig_preview_transaction`/`rig_commit_transaction`, CLI `transaction`.
+- 기존 키폼 전체를 보간 보존하는 정점 세분화: `subdivide_mesh`.
+- Creator의 실시간 파라미터·viewport 캡처 증거 수집: `creator_capture_pose_sweep` (연결된 실행 환경에서만).
 
 ### 아직 구현하지 않은 것
 

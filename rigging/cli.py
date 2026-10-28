@@ -8,6 +8,8 @@ from native.inp08 import parse, inspect
 from .contracts import validate_manifest, make_anchor, FORMAT
 from .deform import propose_keyform
 from .handoff import manual_handoff, binding_vertex_slice
+from .transactions import execute_transaction
+from .quality import inspect_geometry
 
 
 def main(argv=None):
@@ -23,9 +25,22 @@ def main(argv=None):
     sl.add_argument('model');sl.add_argument('node_guid');sl.add_argument('parameter_guid')
     sl.add_argument('binding_index',type=int);sl.add_argument('x',type=int);sl.add_argument('y',type=int)
     sl.add_argument('--start',type=int,default=0);sl.add_argument('--limit',type=int,default=256)
+    audit=sub.add_parser('geometry-audit')
+    audit.add_argument('model')
+    audit.add_argument('--no-pairs',action='store_true')
+    tx=sub.add_parser('transaction')
+    tx.add_argument('model')
+    tx.add_argument('batch')
+    tx.add_argument('--out',default=None)
+    tx.add_argument('--commit',action='store_true')
+    tx.add_argument('--strict-pairs',action='store_true')
     a=p.parse_args(argv)
     src=Path(a.model).read_bytes();doc,_,tail=parse(src)
-    if a.command=='inspect':data={'source_sha256':hashlib.sha256(src).hexdigest(),**inspect(doc)}
+    if a.command=='geometry-audit':data=inspect_geometry(doc,include_pairs=not a.no_pairs)
+    elif a.command=='transaction':
+        batch=json.loads(Path(a.batch).read_text(encoding='utf8'))
+        data=execute_transaction(a.model,batch,destination=a.out,commit=a.commit,strict_pairs=a.strict_pairs)
+    elif a.command=='inspect':data={'source_sha256':hashlib.sha256(src).hexdigest(),**inspect(doc)}
     elif a.command=='validate-anchors':data=validate_manifest(doc,src,json.loads(Path(a.manifest).read_text(encoding='utf8')))
     elif a.command=='manual-handoff':
         anchors=json.loads(Path(a.anchors).read_text(encoding='utf8')) if a.anchors else None

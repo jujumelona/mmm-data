@@ -2,6 +2,8 @@
 
 Independent, open-source **Inochi2D 0.8 rig-authoring and quality-gate research toolkit** with a CLI, a separately installable MCP endpoint, and a guarded interface to a patched Inochi Creator. It is **not** a finished professional auto-rigger or a Creator replacement.
 
+**v0.5.0 additions:** atomic multi-edit INP1 transactions, all-binding-preserving shared-edge mesh subdivision, offline additive-pair geometry safety screening, and opt-in live Creator viewport evidence capture. These are individually tested; no live Creator binary was available in the test environment. See `docs/TRANSACTIONS_LIVE_QA_KO.md`.
+
 ## Status: working versus missing
 
 | Feature | Status |
@@ -21,6 +23,9 @@ Independent, open-source **Inochi2D 0.8 rig-authoring and quality-gate research 
 | Rig quality greater than professional Inochi2D Creator authoring | **Not demonstrated** |
 | Real Creator renderer + visual AI optimization and output acceptance | **Not implemented** |
 | INP2/0.9 models | **Not implemented / refused** |
+| Atomic multi-edit transaction with sha/version checks and new-file-only output | **Implemented on INP1** |
+| Topology refinement with shared-edge interpolation of every existing deform key | **Implemented; does not imply perceptual quality** |
+| Live Creator viewport pose evidence with parameter restoration | **Integration implemented; requires patched Creator; not live tested here** |
 
 No character art, private models, original vendor code or model weights are bundled.
 

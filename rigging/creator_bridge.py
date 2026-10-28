@@ -11,7 +11,7 @@ from urllib.error import URLError
 
 class CreatorBridgeError(RuntimeError): pass
 
-READ_METHODS={'ping','get_status','list_nodes','get_node','list_parameters','list_animations'}
+READ_METHODS={'ping','get_status','list_nodes','get_node','list_parameters','list_animations','capture_viewport'}
 WRITE_METHODS={'set_node_transform','set_parameter','save_project','arm_parameter','disarm_parameter'}
 
 
@@ -66,6 +66,7 @@ def set_node_transform_verified(guid, *, translation=None, rotation=None, scale=
     if len(payload)==1:raise CreatorBridgeError('no transform change provided')
     if translation is not None:
         raise CreatorBridgeError('node translation changes pivot/children; no mesh/child compensation supported')
+    # An ancestor changing can relocate this node without any local transform change.
     if not isinstance(expected.get('ancestor_chain'), list):
         raise CreatorBridgeError('expected ancestor_chain required; call creator_manual_edit_context first')
     context=creator_manual_edit_context(guid)
@@ -77,24 +78,28 @@ def set_node_transform_verified(guid, *, translation=None, rotation=None, scale=
 
 
 def creator_probe() -> dict:
-    """Perform actual localhost RPC probes; MCP registration alone is not connectivity."""
+    """Use actual local RPC calls; never label imported tool wrappers as connected."""
     try:
         ping=call_creator('ping')
         status=call_creator('get_status')
         return {'creator_connected':True,'rpc_ping':ping,'creator_status':status,
                 'mesh_edit':False,'parameter_binding_edit':False,
-                'warning':'Live mesh and binding editing is unavailable in the upstream bridge.'}
+                'warning':'Live mesh/binding editing is unavailable in the upstream bridge.'}
     except (CreatorBridgeError,OSError,ValueError) as exc:
         return {'creator_connected':False,'error':f'{type(exc).__name__}: {exc}',
                 'mesh_edit':False,'parameter_binding_edit':False}
 
 
 def creator_manual_edit_context(guid: str) -> dict:
-    """Read the complete live parent-chain snapshot; do not invent unavailable pivots."""
+    """Full hierarchical handoff from the existing Creator bridge, no mutations.
+
+    All coordinates are *live Creator local* coordinates; mesh-local pivots,
+    physics origins, clipping and parameter bindings are NOT exposed by this RPC.
+    """
     node=call_creator('get_node',{'uuid':guid})
     tree=call_creator('list_nodes',{'detail':True})
     params=call_creator('list_parameters')
-    if not isinstance(node,dict) or str(node.get('uuid'))!=str(guid):
+    if not isinstance(node,dict) or str(node.get('uuid')) != str(guid):
         raise CreatorBridgeError('Creator returned wrong live node UUID')
     if not isinstance(tree,dict) or not isinstance(tree.get('root'),dict):
         raise CreatorBridgeError('Creator returned incomplete hierarchy')
@@ -102,7 +107,7 @@ def creator_manual_edit_context(guid: str) -> dict:
     def walk(item,ancestors):
         if not isinstance(item,dict):raise CreatorBridgeError('malformed node hierarchy')
         entry={key:item.get(key) for key in ('uuid','parent_uuid','translation','rotation','scale','zsort','enabled','type')}
-        if str(item.get('uuid'))==str(guid):found.append(ancestors+[entry])
+        if str(item.get('uuid')) == str(guid):found.append(ancestors+[entry])
         for child in item.get('children',[]) or []:
             walk(child,ancestors+[entry])
     walk(tree['root'],[])
@@ -112,8 +117,8 @@ def creator_manual_edit_context(guid: str) -> dict:
         raise CreatorBridgeError('live node parent differs from hierarchy')
     if any(key not in node for key in ('translation','rotation','scale','parent_uuid')):
         raise CreatorBridgeError('Creator snapshot missing transform; cannot edit safely')
-    snapshot={key:node.get(key) for key in ('uuid','translation','rotation','scale','parent_uuid','zsort','enabled')}
-    return {'uuid':str(guid),'node_snapshot':snapshot,'ancestor_chain':chain,
+    node_snapshot={key:node.get(key) for key in ('uuid','translation','rotation','scale','parent_uuid','zsort','enabled')}
+    return {'uuid':str(guid),'node_snapshot':node_snapshot,'ancestor_chain':chain,
             'parameters':params,
             'authoring_context_missing':['mesh_vertices','mesh_uv','actual_pivot','parameter_bindings',
                                          'physics_anchors','mask_relationships','parameter_drivers',
