@@ -8,9 +8,15 @@ import json
 from pathlib import Path
 
 try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError as exc:
-    raise SystemExit("MCP extra not installed. pip install -e '.[mcp]'") from exc
+    # MCP Python SDK 2.x renamed FastMCP to MCPServer. Prefer the current API.
+    from mcp.server.mcpserver import MCPServer as FastMCP
+except ImportError:
+    try:
+        from mcp.server.fastmcp import FastMCP  # MCP Python SDK 1.x
+    except ImportError as exc:
+        raise SystemExit(
+            "Compatible MCP runtime missing: install with pip install -e '.[mcp]'"
+        ) from exc
 
 from native.inp08 import parse, inspect, extract_samples, encode, apply_keyform, atomic_write
 from rigging.contracts import validate_manifest, lineage, make_anchor, mesh_fingerprint
