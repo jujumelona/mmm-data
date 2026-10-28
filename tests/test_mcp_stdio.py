@@ -39,7 +39,7 @@ class RealMCPStdioTest(unittest.TestCase):
                                    'creator_manual_edit_snapshot'):
                         self.assertIn(needed, names)
                     response = await client.call_tool('rig_status', {})
-                    self.assertFalse(response.isError)
+                    self.assertFalse(getattr(response, 'is_error', getattr(response, 'isError', False)))
                     content = next(item.text for item in response.content if item.type == 'text')
                     value = json.loads(content)
                     self.assertEqual(value['psd_to_full_rig'], 'NOT implemented')

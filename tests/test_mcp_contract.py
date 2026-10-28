@@ -23,7 +23,8 @@ class TestMCP(unittest.TestCase):
         # Patch only the MCP module entries: restoring all sys.modules would
         # discard NumPy modules imported during this test and cause a C-extension
         # reimport failure later in the same Python process.
-        fakes={'mcp':mcp,'mcp.server':server,'mcp.server.fastmcp':fast}
+        v2=types.ModuleType('mcp.server.mcpserver');v2.MCPServer=FakeMCP
+        fakes={'mcp':mcp,'mcp.server':server,'mcp.server.fastmcp':fast,'mcp.server.mcpserver':v2}
         self._missing=object()
         self._saved={key:sys.modules.get(key,self._missing) for key in fakes}
         sys.modules.update(fakes)

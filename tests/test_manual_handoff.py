@@ -150,7 +150,8 @@ class ManualHandoffTests(unittest.TestCase):
         import types,importlib
         mcp=types.ModuleType('mcp');server=types.ModuleType('mcp.server');fast=types.ModuleType('mcp.server.fastmcp')
         fast.FastMCP=FakeMCP
-        with patch.dict(sys.modules,{'mcp':mcp,'mcp.server':server,'mcp.server.fastmcp':fast}):
+        v2=types.ModuleType('mcp.server.mcpserver');v2.MCPServer=FakeMCP
+        with patch.dict(sys.modules,{'mcp':mcp,'mcp.server':server,'mcp.server.fastmcp':fast,'mcp.server.mcpserver':v2}):
             sys.modules.pop('rigging.mcp_server',None)
             mod=importlib.import_module('rigging.mcp_server')
             self.assertIn('rig_manual_handoff',mod.mcp.registered)
