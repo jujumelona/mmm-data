@@ -40,7 +40,7 @@ def rig_status()->dict:
             'manual_handoff_and_paged_vertex_bindings':'implemented_file_state_only',
             'tps_existing_keyform_proposal':'implemented',
             'creator_live_node_parameter_bridge':'requires patched Creator 0.8',
-            'creator_live_mesh_and_binding_edit':'NOT implemented',
+            'creator_live_mesh_and_binding_edit':'file-roundtrip export/import only; native in-memory API NOT implemented',
             'auto_pivot_reparent_preserve_world':'NOT implemented',
             'psd_to_full_rig':'NOT implemented',
             'ai_visual_quality_or_render_loop':'NOT implemented',
@@ -243,6 +243,7 @@ def rig_agent_save_batch(path: str,batch_json: str,output_path: str,
 
 
 from rigging.creator_bridge import creator_simple_edit_guarded
+from rigging.live_model_bridge import prepare_session as live_prepare, preview_batch as live_preview, apply_batch as live_apply
 
 @mcp.tool()
 def creator_get_live_status() -> dict:
@@ -262,6 +263,25 @@ def creator_create_or_edit_basic(method: str, params_json: str, expected_project
     return creator_simple_edit_guarded(method,json.loads(params_json),
                                        expected_project_path=expected_project_path,
                                        expected_node=expected)
+
+@mcp.tool()
+def creator_prepare_rig_session(workspace:str, expected_project_path:str)->dict:
+    """Export currently opened Creator puppet with immutable recovery snapshot."""
+    return live_prepare(workspace,expected_project_path=expected_project_path)
+
+@mcp.tool()
+def creator_preview_rig_session(session_path:str,batch_json:str)->dict:
+    """Validate edits to the live Creator export without replacing the current project."""
+    return live_preview(session_path,json.loads(batch_json))
+
+@mcp.tool()
+def creator_apply_rig_session(session_path:str,batch_json:str,
+                              expected_project_path:str,
+                              acknowledge_project_replacement:bool=False)->dict:
+    """Import AI-edited model with baseline backup and strict readback. Loses Creator Undo history."""
+    return live_apply(session_path,json.loads(batch_json),
+                      expected_project_path=expected_project_path,
+                      acknowledge_project_replacement=acknowledge_project_replacement)
 
 if __name__=='__main__':
     mcp.run()

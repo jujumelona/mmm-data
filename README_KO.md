@@ -76,3 +76,8 @@ MCP 도구 `rig_agent_capabilities` → `rig_agent_model_map` → `rig_agent_rea
 
 
 패치된 Creator 실행이 확인되는 경우 `creator_get_live_status`·`creator_get_live_parameters`·`creator_create_or_edit_basic`으로 기존 Creator 브리지의 기본 노드 생성·이름·활성화·파라미터 생성을 호출할 수 있다. 호출 전 프로젝트와 노드 정보를 비교하지만 **Creator 내부 원자적 트랜잭션은 아님**. 실시간 정점·바인딩·물리 직접 편집은 여전히 별도 D 브리지 개발이 필요하다.
+
+
+## Creator 0.8 연결 (파일 왕복)
+
+패치된 Creator MCP의 export_inp/import_inp로 모델 백업 → AI 정밀 편집 → Creator 재로드 → 재수출 검증이 가능합니다. **Creator의 Undo 이력은 소실되므로 새로운 이름으로 저장해야 합니다.** 실제 Creator 실행 검증은 별도입니다. [사용 설명서](docs/CREATOR_LIVE_ROUNDTRIP_KO.md)

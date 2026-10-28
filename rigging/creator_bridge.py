@@ -11,8 +11,8 @@ from urllib.error import URLError
 
 class CreatorBridgeError(RuntimeError): pass
 
-READ_METHODS={'ping','get_status','list_nodes','get_node','list_parameters','list_animations','capture_viewport'}
-WRITE_METHODS={'set_node_transform','set_parameter','save_project','arm_parameter','disarm_parameter'}
+READ_METHODS={'ping','get_status','list_nodes','get_node','list_parameters','list_animations','capture_viewport','export_inp'}
+WRITE_METHODS={'set_node_transform','set_parameter','save_project','arm_parameter','disarm_parameter','import_inp'}
 
 
 def call_creator(method: str, params: dict | None = None, *, timeout=15):
