@@ -35,7 +35,7 @@ def load_model(path):
 @mcp.tool()
 def rig_status()->dict:
     """Clearly report available and unsupported capabilities."""
-    return {'version':'0.5.0','inp08_read_write':'implemented',
+    return {'version':'0.6.0','inp08_read_write':'implemented',
             'inspect_anchors_and_pivots':'implemented',
             'manual_handoff_and_paged_vertex_bindings':'implemented_file_state_only',
             'tps_existing_keyform_proposal':'implemented',
@@ -194,4 +194,52 @@ def rig_commit_transaction(path: str, batch_path: str, out_path: str,
     batch=json.loads(Path(batch_path).read_text(encoding='utf8'))
     return execute_transaction(path,batch,destination=out_path,commit=True,strict_pairs=True)
 
-if __name__=='__main__':mcp.run()
+
+
+
+from rigging.agent_editor import model_map as _agent_map,read_target as _agent_read
+
+@mcp.tool()
+def rig_agent_capabilities() -> dict:
+    """Discover actual AI editing support and missing Creator runtime capabilities."""
+    return {'format':'inochi-ai-rigging.agent-capabilities.v1',
+            'offline_edits':['set_node_property','set_parameter_property','edit_mesh_vertices',
+                             'edit_mesh_uvs','replace_deform_keyform','replace_binding_value_keyform',
+                             'set_new_keyform','subdivide_mesh'],
+            'workflow':['rig_agent_model_map','rig_agent_read_target','rig_agent_preview_batch',
+                        'rig_agent_save_batch','rig_geometry_audit','creator_capture_pose_sweep'],
+            'source_overwrite':False,'creator_live_mesh_edit':False,
+            'ai_visual_aesthetic_score':False,'native_creator_atomic_transaction':False}
+
+@mcp.tool()
+def rig_agent_model_map(path: str) -> dict:
+    """Read real GUIDs, parameter binding indexes and mesh revisions."""
+    raw,doc,_=load_model(path)
+    return _agent_map(doc,hashlib.sha256(raw).hexdigest())
+
+@mcp.tool()
+def rig_agent_read_target(path: str, kind: str, guid: str, field: str="",
+                          parameter_guid: str="",node_guid: str="",binding_index: int=0,
+                          start: int=0,limit: int=256) -> dict:
+    """Read exact stored field, revision hash and optional paged arrays."""
+    raw,doc,_=load_model(path)
+    result=_agent_read(doc,kind,guid,field,parameter_guid,node_guid,binding_index,start,limit)
+    result['source_sha256']=hashlib.sha256(raw).hexdigest()
+    return result
+
+@mcp.tool()
+def rig_agent_preview_batch(path: str,batch_json: str) -> dict:
+    """Apply edits to a disposable model copy and report quality without writes."""
+    return execute_transaction(path,json.loads(batch_json),commit=False,strict_pairs=True)
+
+@mcp.tool()
+def rig_agent_save_batch(path: str,batch_json: str,output_path: str,
+                         allow_agent_new_output: bool=False) -> dict:
+    """Allow AI to publish verified edits to a NEW INP/INX file, never source."""
+    if not allow_agent_new_output:
+        raise ValueError('allow_agent_new_output is required')
+    return execute_transaction(path,json.loads(batch_json),destination=output_path,
+                               commit=True,strict_pairs=True)
+
+if __name__=='__main__':
+    mcp.run()

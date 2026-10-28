@@ -10,6 +10,7 @@ from .deform import propose_keyform
 from .handoff import manual_handoff, binding_vertex_slice
 from .transactions import execute_transaction
 from .quality import inspect_geometry
+from .agent_editor import model_map as _agent_map,read_target as _agent_read
 
 
 def main(argv=None):
@@ -28,6 +29,11 @@ def main(argv=None):
     audit=sub.add_parser('geometry-audit')
     audit.add_argument('model')
     audit.add_argument('--no-pairs',action='store_true')
+    am=sub.add_parser('agent-map');am.add_argument('model')
+    ar=sub.add_parser('agent-read');ar.add_argument('model');ar.add_argument('kind');ar.add_argument('guid')
+    ar.add_argument('--field',default='');ar.add_argument('--parameter-guid',default='')
+    ar.add_argument('--node-guid',default='');ar.add_argument('--binding-index',type=int,default=0)
+    ar.add_argument('--start',type=int,default=0);ar.add_argument('--limit',type=int,default=256)
     tx=sub.add_parser('transaction')
     tx.add_argument('model')
     tx.add_argument('batch')
@@ -36,7 +42,9 @@ def main(argv=None):
     tx.add_argument('--strict-pairs',action='store_true')
     a=p.parse_args(argv)
     src=Path(a.model).read_bytes();doc,_,tail=parse(src)
-    if a.command=='geometry-audit':data=inspect_geometry(doc,include_pairs=not a.no_pairs)
+    if a.command=='agent-map':data=_agent_map(doc,hashlib.sha256(src).hexdigest())
+    elif a.command=='agent-read':data=_agent_read(doc,a.kind,a.guid,a.field,a.parameter_guid,a.node_guid,a.binding_index,a.start,a.limit)
+    elif a.command=='geometry-audit':data=inspect_geometry(doc,include_pairs=not a.no_pairs)
     elif a.command=='transaction':
         batch=json.loads(Path(a.batch).read_text(encoding='utf8'))
         data=execute_transaction(a.model,batch,destination=a.out,commit=a.commit,strict_pairs=a.strict_pairs)

@@ -66,3 +66,10 @@ python -m rigging.cli binding-slice model.inx NODE_GUID PARAM_GUID 0 2 2 --start
 동일한 `rig_manual_handoff`, `rig_binding_vertex_slice` MCP 도구가 있다. 노드의 실제 리깅 필드가 없으면 추측하지 않고 `null` 또는 별도 `missing_live_evidence`에 기록한다. 자세한 통합 설계와 미구현 목록: `docs/MCP_ENGINE_INTEGRATION_ROADMAP_KO.md`.
 
 현재 공개 GitHub 저장소는 `https://github.com/jujumelona/mmm-data`이며, 기존 데이터 저장소 코드를 대체한 상태다. 저장소 이름 변경은 별도 관리 작업이다.
+
+
+### AI 직접 편집 MCP (v0.6)
+
+MCP 도구 `rig_agent_capabilities` → `rig_agent_model_map` → `rig_agent_read_target` → `rig_agent_preview_batch` → `rig_agent_save_batch` 를 통해 AI가 기존 키폼, 메시 정점, UV 및 일부 노드·파라미터 바인딩 값을 직접 읽고 수정할 수 있습니다. 모든 편집에는 원본 SHA-256, 각 편집 대상의 예상 해시, 명시적 좌표계와 엄격한 기하 검사가 필요합니다. 사용자가 매번 키폼을 조작할 필요 없이 **새 모델 파일만** 저장합니다.
+
+**미구현:** 실행 중인 Inochi Creator의 정점·물리·마스크 직접 편집, 고급 자동 리깅 전 과정, 비전 기반 미적 판정 및 자동 반복 보정. MCP 도구를 추가한 것과 이 기능이 완성됐다는 것은 다릅니다.

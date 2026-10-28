@@ -12,6 +12,7 @@ from pathlib import Path
 from native.inp08 import parse,encode,atomic_write,apply_keyform
 from .topology import subdivide_once
 from .quality import inspect_geometry
+from .agent_editor import apply_agent_edit
 
 FORMAT='inochi-ai-rigging.transaction.v1'
 
@@ -67,6 +68,9 @@ def execute_transaction(model_path:str|Path, batch:dict, *, destination:str|Path
             if key in targets:raise TransactionError('duplicate subdivision target')
             targets.add(key)
             result=subdivide_once(clone,op['node_guid'],expected_mesh_sha256=op['expected_mesh_sha256'])
+        elif kind in ('set_node_property','set_parameter_property','edit_mesh_vertices',
+                      'edit_mesh_uvs','replace_deform_keyform','replace_binding_value_keyform'):
+            result=apply_agent_edit(clone,op)
         else:
             raise TransactionError(f'edit[{i}]: unknown operation {kind!r}')
         report.append({'index':i,'operation':kind,'result':result})
