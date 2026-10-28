@@ -76,8 +76,20 @@ def parse(blob: bytes) -> tuple[dict, bytes, bytes]:
             p += n
         if p != len(blob):
             raise FormatError("extra unknown bytes after extension data")
+    def unique_fields(pairs):
+        obj={}
+        for key,value in pairs:
+            if key in obj:
+                raise FormatError(f"duplicate JSON field {key!r}")
+            obj[key]=value
+        return obj
+
+    def reject_nonfinite(value):
+        raise FormatError(f"non-finite JSON constant {value} in puppet")
+
     try:
-        data = json.loads(original_json.decode("utf-8"))
+        data=json.loads(original_json.decode("utf-8"),object_pairs_hook=unique_fields,
+                        parse_constant=reject_nonfinite)
     except (UnicodeError, json.JSONDecodeError) as e:
         raise FormatError(f"malformed puppet JSON: {e}") from e
     if not isinstance(data, dict) or not isinstance(data.get("nodes"), dict):
@@ -129,7 +141,24 @@ def validate_mesh(node, name):
         raise FormatError(f"{name}: invalid triangle indices")
     if any(type(x) is not int or x < 0 or x >= len(verts) for x in indices):
         raise FormatError(f"{name}: bad triangle index")
-    return {"neutral": verts, "triangles": _triplets(indices)}
+    triangles=_triplets(indices)
+    distinct=set()
+    edges={}
+    for tri in triangles:
+        if len(set(tri))!=3:
+            raise FormatError(f"{name}: triangle repeats a vertex")
+        key=tuple(sorted(tri))
+        if key in distinct:
+            raise FormatError(f"{name}: duplicate triangle")
+        distinct.add(key)
+        for a,b in ((tri[0],tri[1]),(tri[1],tri[2]),(tri[2],tri[0])):
+            pair=min(a,b),max(a,b)
+            edges.setdefault(pair,[]).append((a,b))
+            uses=edges[pair]
+            if len(uses)>2: raise FormatError(f"{name}: non-manifold edge")
+            if len(uses)==2 and uses[0]==uses[1]:
+                raise FormatError(f"{name}: inconsistent winding of shared edge")
+    return {"neutral": verts, "triangles": triangles}
 
 
 def inspect(document):

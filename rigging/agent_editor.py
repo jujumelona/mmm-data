@@ -137,7 +137,8 @@ def apply_agent_edit(doc,op):
             raise AgentEditError("stale mesh SHA")
         expect="mesh_local" if typ=="edit_mesh_vertices" else "texture_uv"
         if op.get("space")!=expect:raise AgentEditError("coordinate space must be "+expect)
-        validate_mesh(target,target.get("name","mesh"))
+        neutral_before=copy.deepcopy(mesh["verts"]) if typ=="edit_mesh_vertices" else None
+        original_mesh=validate_mesh(target,target.get("name","mesh"))
         field=mesh["verts" if typ=="edit_mesh_vertices" else "uvs"]
         updates=op.get("updates")
         if not isinstance(updates,list) or not updates:raise AgentEditError("nonempty updates required")
@@ -153,6 +154,13 @@ def apply_agent_edit(doc,op):
             seen.add(i)
         for u in updates:field[u["index"]]=copy.deepcopy(u["value"])
         validate_mesh(target,target.get("name","mesh"))
+        if typ=="edit_mesh_vertices":
+            from native.local_geometry import area
+            for tri in original_mesh["triangles"]:
+                signed_before=area(*(neutral_before[i] for i in tri))
+                signed_after=area(*(field[i] for i in tri))
+                if abs(signed_before)<=1e-9 or abs(signed_after)<=1e-9 or signed_before*signed_after<=0:
+                    raise AgentEditError("mesh neutral triangle inverted or collapsed by vertex edit")
         return {"op":typ,"node_guid":op["node_guid"],"changed_count":len(seen),
                 "mesh_sha256_after":mesh_fingerprint(mesh)}
     if typ in ("replace_deform_keyform","replace_binding_value_keyform"):
@@ -182,13 +190,15 @@ def apply_agent_edit(doc,op):
             if geometry_errors(mesh["neutral"],new,mesh["triangles"]):
                 raise AgentEditError("unsafe inverted/collapsed deformation")
         else:
-            if type(old) in (int,float):
-                if type(new) not in (int,float) or not finite(new):
-                    raise AgentEditError("scalar type mismatch")
-            elif isinstance(old,list):
-                if not isinstance(new,list) or len(new)!=len(old) or not finite(new):
-                    raise AgentEditError("vector type mismatch")
-            else:raise AgentEditError("unsupported binding data type")
+            prop=b.get("param_name")
+            scalars={"opacity","zSort","transform.t.x","transform.t.y","transform.t.z",
+                     "transform.r.x","transform.r.y","transform.r.z","transform.s.x","transform.s.y"}
+            if prop not in scalars:
+                raise AgentEditError("unsupported scalar binding property; author semantics not verified")
+            if type(old) not in (int,float) or type(new) not in (int,float) or not finite(new):
+                raise AgentEditError("scalar binding type mismatch")
+            if prop=="opacity" and not 0<=new<=1:
+                raise AgentEditError("opacity binding outside [0,1]")
         b["values"][x][y]=copy.deepcopy(new)
         b["isSet"][x][y]=True
         return {"op":typ,"node_guid":op["node_guid"],"parameter_guid":op["parameter_guid"],

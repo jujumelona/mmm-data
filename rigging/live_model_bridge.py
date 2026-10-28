@@ -113,10 +113,11 @@ def apply_batch(folder:str,batch:dict,*,expected_project_path:str,
         imported=True
         call_creator("import_inp",{"path":str(candidate)})
         verified=_export(base/"readback.inp")
-        actual,_,_=parse(verified)
-        expected_doc=_read(candidate)[1]
-        if actual!=expected_doc:
-            raise CreatorSessionError("Creator import/readback model mismatch")
+        actual,_,verified_tail=parse(verified)
+        candidate_bytes,expected_doc=_read(candidate)
+        _,_,expected_tail=parse(candidate_bytes)
+        if actual!=expected_doc or verified_tail!=expected_tail:
+            raise CreatorSessionError("Creator import/readback model or texture/extension mismatch")
         _mark(base,m,"verified",readback_sha256=_hash(verified))
         return {"creator_import_verified":True,"source_preserved":True,
                 "editor_undo_history_preserved":False,"editor_project_saved":False,
@@ -127,8 +128,11 @@ def apply_batch(folder:str,batch:dict,*,expected_project_path:str,
             try:
                 call_creator("import_inp",{"path":str(base/"source.inp")})
                 restored=_export(base/"rollback_readback.inp")
-                if parse(restored)[0]!=_read(base/"source.inp")[1]:
-                    raise CreatorSessionError("rollback model mismatch")
+                restored_doc,_,restored_tail=parse(restored)
+                original_bytes,original_doc=_read(base/"source.inp")
+                _,_,original_tail=parse(original_bytes)
+                if restored_doc!=original_doc or restored_tail!=original_tail:
+                    raise CreatorSessionError("rollback model or texture/extension mismatch")
             except BaseException as err:
                 _mark(base,m,"RECOVERY_REQUIRED",reason=str(exc),rollback_error=str(err))
                 raise CreatorSessionError(
