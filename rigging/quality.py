@@ -7,6 +7,7 @@ combo findings are diagnostic and never claimed as an exact SDK render.
 from __future__ import annotations
 from collections import defaultdict
 import itertools
+import math
 from native.inp08 import walk_nodes,validate_mesh
 from native.local_geometry import area,geometry_errors
 from .topology import _offset_grid, TopologyError
@@ -40,9 +41,38 @@ def inspect_geometry(document:dict, *, include_pairs:bool=True) -> dict:
             raise QualityError('missing or duplicate parameter GUID')
         parameter_guids.add(str(identity))
         axes=param.get('axis_points')
-        for bind in param.get('bindings',[]):
-            if bind.get('param_name')!='deform':continue
-            guid=str(bind.get('node',''))
+        bindings=param.get('bindings',[])
+        if not isinstance(bindings,list):
+            raise QualityError('invalid parameter binding list')
+        for bind in bindings:
+            if not isinstance(bind,dict):
+                raise QualityError('invalid parameter binding entry')
+            target=str(bind.get('node',''))
+            if not target or target not in all_node_guids:
+                raise QualityError('binding points to nonexistent node GUID')
+            if not isinstance(axes,list) or len(axes)!=2 or any(not isinstance(ax,list) or not ax for ax in axes):
+                raise QualityError('binding axis dimensions missing')
+            values=bind.get('values')
+            flags=bind.get('isSet')
+            nx,ny=len(axes[0]),len(axes[1])
+            if not isinstance(values,list) or not isinstance(flags,list) or len(values)!=nx or len(flags)!=nx:
+                raise QualityError('binding grid X dimensions invalid')
+            if any(not isinstance(row,list) or len(row)!=ny for row in values):
+                raise QualityError('binding value grid Y dimensions invalid')
+            if any(not isinstance(row,list) or len(row)!=ny or any(type(v) is not bool for v in row) for row in flags):
+                raise QualityError('binding authored-flag grid invalid')
+            prop=bind.get('param_name')
+            if prop in ('opacity','zSort','transform.t.x','transform.t.y','transform.t.z',
+                        'transform.r.x','transform.r.y','transform.r.z','transform.s.x','transform.s.y'):
+                for x in range(nx):
+                    for y in range(ny):
+                        value=values[x][y]
+                        if type(value) not in (int,float) or not math.isfinite(value):
+                            raise QualityError('binding scalar key value invalid')
+                        if prop=='opacity' and not 0<=value<=1:
+                            raise QualityError('opacity binding key outside range')
+            if prop!='deform':continue
+            guid=target
             if guid not in nodes:
                 raise QualityError('deform binding missing drawable node')
             path,mesh=nodes[guid]

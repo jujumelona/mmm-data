@@ -89,8 +89,14 @@ def capture_pose_sweep(parameter_uuid:str, poses:list[list[float]])->dict:
             evidence.append({'pose':pose,**_capture()})
     finally:
         if changed:
-            # Restore even on capture error; expose failures rather than silently
-            # claiming success. Does not alter authored keyforms.
+            # A project switch makes UUID-based restore destructive to a
+            # different puppet. Do not touch a new project on failure.
+            try:
+                restore_state = _snapshot()
+            except Exception as exc:
+                raise LiveQAError('CRITICAL: Creator status unavailable during restore; manual recovery required') from exc
+            if restore_state.get('project_path') != project:
+                raise LiveQAError('CRITICAL: Creator project changed; refusing to restore a parameter in another model')
             call_creator('set_parameter',{'uuid':parameter_uuid,'x':original[0],'y':original[1]})
             restored=_lookup(call_creator('list_parameters'),parameter_uuid)
             if any(abs(a-b)>1e-5 for a,b in zip(restored['value'],original)):

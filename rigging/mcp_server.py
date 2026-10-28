@@ -91,6 +91,8 @@ def rig_apply_approved_plan(path:str, plan_path:str, out_path:str, visual_review
     if not visual_review_ack:raise ValueError('explicit visual_review_ack required')
     src=Path(path).resolve();out=Path(out_path).resolve()
     if src==out or out.exists():raise ValueError('refusing output overwrite')
+    if out.suffix.lower() not in ('.inp','.inx'):
+        raise ValueError('approved model must use .inp or .inx extension')
     raw,doc,tail=load_model(src)
     plan=json.loads(Path(plan_path).read_text(encoding='utf8'))
     if plan.get('format')!='inochi-authoring.keyform-plan.v1' or plan.get('source_sha256')!=hashlib.sha256(raw).hexdigest():
@@ -112,6 +114,12 @@ def rig_apply_approved_plan(path:str, plan_path:str, out_path:str, visual_review
         if set(p)-{'parameter','node_guid','key_index','vertex_offsets'}:
             raise ValueError('unknown or privileged keyform patch field')
         apply_keyform(clone,p)
+    # The alternate plan writer must not bypass the batch editor's composite
+    # geometry gate: two individually safe keys can invert a triangle together.
+    from rigging.quality import inspect_geometry
+    quality=inspect_geometry(clone,include_pairs=True)
+    if not quality['individual_geometry_pass'] or not quality['additive_proxy_pair_pass']:
+        raise ValueError('approved plan fails composite geometry validation')
     updated=encode(clone,tail)
     doc2,_,tail2=parse(updated)
     if doc2!=clone or tail!=tail2:raise ValueError('roundtrip failed')
