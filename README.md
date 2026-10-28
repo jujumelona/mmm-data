@@ -13,6 +13,7 @@ Independent, open-source **Inochi2D 0.8 rig-authoring and quality-gate research 
 | Parent-chain fingerprints, model SHA, joint/rotation anchor provenance | **Implemented** |
 | World/local transform and 2D reparent plan | **Implemented on supported planar frames** — refuses root-locked and shear cases |
 | Nonuniform **TPS** landmark-driven deform-keyform proposal | **Implemented** — existing mesh, parameter and binding only |
+| Node-level manual handoff + paged keyform vertex/UV/offset inspection | **Implemented** — raw file state, not evaluated Creator state |
 | Thin optional MCP server wrapping the same core as CLI | **Implemented, needs `mcp` package to start** |
 | Optional HTTP adapter to `ozekimasaki/inochi-creator-mcp` live Creator bridge | **Implemented on the documented RPC contract; no live Creator E2E verified** |
 | PSD → full high-quality rig, alpha-adaptive AutoMesh replacement | **Not implemented** |
@@ -79,3 +80,12 @@ Existing MCP systems were inspected for their *protocols and boundaries*. This r
 Inochi2D and Creator are separate projects, generally BSD-2-Clause. See `docs/EXTERNAL_MCP_AUDIT.md` for precise compatibility. Other registered GitHub projects are discovery references, **not integrated engines**. Follow their original licenses before copying code.
 
 This project is not affiliated with the Inochi2D Project or either MCP author.
+
+## Current source-backed handoff commands
+
+```bash
+python -m rigging.cli manual-handoff model.inx NODE_GUID --anchors anchors.json
+python -m rigging.cli binding-slice model.inx NODE_GUID PARAM_GUID 0 2 2 --start 0 --limit 256
+```
+
+These functions also exist as MCP tools `rig_manual_handoff` and `rig_binding_vertex_slice`. They reveal exactly which data remains unavailable from a live Creator. See `docs/MCP_ENGINE_INTEGRATION_ROADMAP_KO.md` for external MCP comparisons and production-level gaps. Current GitHub publication is `jujumelona/mmm-data` until the repository is renamed.

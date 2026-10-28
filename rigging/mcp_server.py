@@ -15,6 +15,7 @@ except ImportError as exc:
 from native.inp08 import parse, inspect, extract_samples, encode, apply_keyform, atomic_write
 from rigging.contracts import validate_manifest, lineage, make_anchor, mesh_fingerprint
 from rigging.deform import propose_keyform
+from rigging.handoff import manual_handoff, binding_vertex_slice
 from rigging.creator_bridge import call_creator, set_node_transform_verified, creator_probe, creator_manual_edit_context
 
 mcp=FastMCP('Inochi2D-AI-Rigging')
@@ -28,8 +29,9 @@ def load_model(path):
 @mcp.tool()
 def rig_status()->dict:
     """Clearly report available and unsupported capabilities."""
-    return {'version':'0.4.0','inp08_read_write':'implemented',
+    return {'version':'0.4.2','inp08_read_write':'implemented',
             'inspect_anchors_and_pivots':'implemented',
+            'manual_handoff_and_paged_vertex_bindings':'implemented_file_state_only',
             'tps_existing_keyform_proposal':'implemented',
             'creator_live_node_parameter_bridge':'requires patched Creator 0.8',
             'creator_live_mesh_and_binding_edit':'NOT implemented',
@@ -94,6 +96,8 @@ def rig_apply_approved_plan(path:str, plan_path:str, out_path:str, visual_review
     if not isinstance(patches,list) or not patches:raise ValueError('no patches')
     for p in patches:
         if not isinstance(p,dict):raise ValueError('invalid patch object')
+        # MCP cannot request the explicit unsafe/overwrite flags exposed by the
+        # low-level offline library. A forged plan must not bypass geometry QA.
         if p.get('allow_replace') or p.get('allow_unsafe'):
             raise ValueError('MCP refuses authored keyform replacement or unsafe geometry overrides')
         if set(p)-{'parameter','node_guid','key_index','vertex_offsets'}:
@@ -107,13 +111,27 @@ def rig_apply_approved_plan(path:str, plan_path:str, out_path:str, visual_review
             'creator_render_tested':False,'requires_manual_creator_render':True}
 
 @mcp.tool()
+def rig_manual_handoff(path:str,node_guid:str,anchors_manifest_path:str="")->dict:
+    """Read exact node/parent/binding/texture references and typed anchors before a manual edit."""
+    raw,doc,_=load_model(path)
+    anchors=json.loads(Path(anchors_manifest_path).read_text(encoding='utf8')) if anchors_manifest_path else None
+    return manual_handoff(doc,raw,node_guid,anchors=anchors)
+
+@mcp.tool()
+def rig_binding_vertex_slice(path:str,node_guid:str,parameter_guid:str,binding_index:int,
+                             key_index:list[int],start_vertex:int=0,limit:int=256)->dict:
+    """Read a bounded slice of existing keyform vertex offsets, UVs and neutral positions."""
+    raw,doc,_=load_model(path)
+    return binding_vertex_slice(doc,raw,node_guid,parameter_guid,binding_index,key_index,start_vertex,limit)
+
+@mcp.tool()
 def creator_probe_connection()->dict:
     """Perform a real localhost Creator bridge handshake; no mock success."""
     return creator_probe()
 
 @mcp.tool()
 def creator_manual_edit_snapshot(uuid:str)->dict:
-    """Return live parent-chain and explicit missing authoring data."""
+    """Get live parent/pivot-related context and explicitly list unavailable rig details."""
     return creator_manual_edit_context(uuid)
 
 @mcp.tool()
