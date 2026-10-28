@@ -109,13 +109,15 @@ def walk_nodes(root: dict):
     while stack:
         node, path = stack.pop()
         if not isinstance(node, dict):
-            continue
+            raise FormatError("malformed node in hierarchy")
         name = node.get("name", "(unnamed)")
         current = f"{path}/{name}"
+        children = node.get("children", [])
+        if not isinstance(children, list) or any(not isinstance(child, dict) for child in children):
+            raise FormatError(f"{current}: malformed children in node hierarchy")
         yield current, node
-        for child in reversed(node.get("children", [])):
-            if isinstance(child, dict):
-                stack.append((child, current))
+        for child in reversed(children):
+            stack.append((child, current))
 
 
 def _coords(pts):

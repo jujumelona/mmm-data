@@ -16,12 +16,15 @@ class QualityError(ValueError): pass
 
 def inspect_geometry(document:dict, *, include_pairs:bool=True) -> dict:
     nodes={}
+    all_node_guids=set()
     for path,node in walk_nodes(document['nodes']):
+        identity=node.get('guid',node.get('uuid'))
+        if identity is None or identity == '' or str(identity) in all_node_guids:
+            raise QualityError('missing or duplicate node GUID')
+        guid=str(identity)
+        all_node_guids.add(guid)
         mesh=validate_mesh(node,path)
         if mesh:
-            guid=str(node.get('guid',node.get('uuid','')))
-            if not guid or guid in nodes:
-                raise QualityError('missing or duplicate drawable node GUID')
             nodes[guid]=(path,mesh)
     per_node=defaultdict(list)
     cases=[]
@@ -29,8 +32,13 @@ def inspect_geometry(document:dict, *, include_pairs:bool=True) -> dict:
         neutral=mesh['neutral'];tri=mesh['triangles']
         if any(abs(area(*(neutral[i] for i in t)))<1e-10 for t in tri):
             raise QualityError(f'{path}: invalid neutral triangulation')
+    parameter_guids=set()
     for param in document.get('param',[]):
         if not isinstance(param,dict):raise QualityError('invalid parameter')
+        identity=param.get('guid',param.get('uuid'))
+        if identity is None or identity == '' or str(identity) in parameter_guids:
+            raise QualityError('missing or duplicate parameter GUID')
+        parameter_guids.add(str(identity))
         axes=param.get('axis_points')
         for bind in param.get('bindings',[]):
             if bind.get('param_name')!='deform':continue

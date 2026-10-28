@@ -93,3 +93,28 @@ class IntegrityRegressions(unittest.TestCase):
         part["mesh"]["indices"][3:6]=[1,4,3]
         with self.assertRaisesRegex(FormatError,"winding"):
             validate_mesh(part,"face")
+
+
+class GraphIntegrityCases(unittest.TestCase):
+    def test_duplicate_nonmesh_guid(self):
+        from rigging.quality import inspect_geometry
+        doc,_,_=specimen()
+        doc["nodes"]["children"].append({"guid":"root","name":"duplicate group","type":"Node","children":[]})
+        with self.assertRaisesRegex(ValueError,"duplicate node GUID"):
+            inspect_geometry(doc)
+
+    def test_duplicate_parameter_guid(self):
+        from rigging.quality import inspect_geometry
+        doc,_,_=specimen()
+        param=copy.deepcopy(doc["param"][0])
+        param["name"]="collision"
+        doc["param"].append(param)
+        with self.assertRaisesRegex(ValueError,"duplicate parameter GUID"):
+            inspect_geometry(doc)
+
+    def test_malformed_child_is_not_silently_skipped(self):
+        from native.inp08 import walk_nodes
+        doc,_,_=specimen()
+        doc["nodes"]["children"].append(None)
+        with self.assertRaisesRegex(FormatError,"children|hierarchy"):
+            list(walk_nodes(doc["nodes"]))
