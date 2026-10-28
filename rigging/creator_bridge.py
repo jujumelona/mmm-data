@@ -125,3 +125,48 @@ def creator_manual_edit_context(guid: str) -> dict:
                                          'texture_pixel_calibration'],
             'safe_for_automatic_pivot_relocation':False,
             'note':'Read-only snapshot. No atomic compare-and-set in upstream Creator RPC; recheck before manual edits.'}
+
+
+# Additional existing Creator 0.8 RPCs. This does not implement D-side mesh editing.
+WRITE_METHODS.update({'rename_node','set_node_enabled','create_node','add_parameter'})
+
+def creator_simple_edit_guarded(method: str, params: dict, *,
+                               expected_project_path: str, expected_node: dict | None=None) -> dict:
+    """Best-effort preflight. Not a native atomic compare-and-swap."""
+    if method not in {'rename_node','set_node_enabled','create_node','add_parameter'}:
+        raise CreatorBridgeError('unsupported Creator operation')
+    if not expected_project_path or not isinstance(params,dict):
+        raise CreatorBridgeError('project identity and typed parameters required')
+    status=call_creator('get_status')
+    if not isinstance(status,dict) or status.get('project_path')!=expected_project_path:
+        raise CreatorBridgeError('Creator project changed')
+    if method in ('rename_node','set_node_enabled'):
+        required={'uuid','name'} if method=='rename_node' else {'uuid','enabled'}
+        if set(params)!=required or expected_node is None:
+            raise CreatorBridgeError('current live node snapshot is required')
+        if method=='rename_node' and (not isinstance(params.get('name'),str) or not params['name'].strip()):
+            raise CreatorBridgeError('invalid name')
+        if method=='set_node_enabled' and type(params.get('enabled')) is not bool:
+            raise CreatorBridgeError('invalid enabled flag')
+        if call_creator('get_node',{'uuid':params['uuid']})!=expected_node:
+            raise CreatorBridgeError('live node snapshot changed')
+    elif method=='create_node':
+        if set(params)-{'type','parent_uuid','name'} or params.get('type') not in {
+                'Node','Composite','MeshGroup','SimplePhysics','Camera'}:
+            raise CreatorBridgeError('unsupported node type')
+        if not params.get('parent_uuid') or expected_node is None:
+            raise CreatorBridgeError('parent UUID and snapshot required')
+        if call_creator('get_node',{'uuid':params['parent_uuid']})!=expected_node:
+            raise CreatorBridgeError('live parent snapshot changed')
+    else:
+        if set(params)-{'name','is_vec2'} or not isinstance(params.get('name'),str) or not params['name'].strip():
+            raise CreatorBridgeError('invalid new parameter')
+        if 'is_vec2' in params and type(params['is_vec2']) is not bool:
+            raise CreatorBridgeError('is_vec2 must be boolean')
+    result=call_creator(method,params)
+    check=call_creator('get_status')
+    if not isinstance(check,dict) or check.get('project_path')!=expected_project_path:
+        raise CreatorBridgeError('CRITICAL: project changed during live edit')
+    return {'result':result,'project_path':expected_project_path,
+            'creator_native_atomic':False,
+            'warning':'Creator RPC has a preflight race window; not an atomic transaction.'}

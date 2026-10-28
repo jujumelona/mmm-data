@@ -73,3 +73,6 @@ python -m rigging.cli binding-slice model.inx NODE_GUID PARAM_GUID 0 2 2 --start
 MCP 도구 `rig_agent_capabilities` → `rig_agent_model_map` → `rig_agent_read_target` → `rig_agent_preview_batch` → `rig_agent_save_batch` 를 통해 AI가 기존 키폼, 메시 정점, UV 및 일부 노드·파라미터 바인딩 값을 직접 읽고 수정할 수 있습니다. 모든 편집에는 원본 SHA-256, 각 편집 대상의 예상 해시, 명시적 좌표계와 엄격한 기하 검사가 필요합니다. 사용자가 매번 키폼을 조작할 필요 없이 **새 모델 파일만** 저장합니다.
 
 **미구현:** 실행 중인 Inochi Creator의 정점·물리·마스크 직접 편집, 고급 자동 리깅 전 과정, 비전 기반 미적 판정 및 자동 반복 보정. MCP 도구를 추가한 것과 이 기능이 완성됐다는 것은 다릅니다.
+
+
+패치된 Creator 실행이 확인되는 경우 `creator_get_live_status`·`creator_get_live_parameters`·`creator_create_or_edit_basic`으로 기존 Creator 브리지의 기본 노드 생성·이름·활성화·파라미터 생성을 호출할 수 있다. 호출 전 프로젝트와 노드 정보를 비교하지만 **Creator 내부 원자적 트랜잭션은 아님**. 실시간 정점·바인딩·물리 직접 편집은 여전히 별도 D 브리지 개발이 필요하다.

@@ -241,5 +241,27 @@ def rig_agent_save_batch(path: str,batch_json: str,output_path: str,
     return execute_transaction(path,json.loads(batch_json),destination=output_path,
                                commit=True,strict_pairs=True)
 
+
+from rigging.creator_bridge import creator_simple_edit_guarded
+
+@mcp.tool()
+def creator_get_live_status() -> dict:
+    """Read the running patched Creator project path and current edit mode."""
+    return call_creator('get_status')
+
+@mcp.tool()
+def creator_get_live_parameters() -> dict:
+    """Read current Creator parameter GUIDs, values, ranges and groups."""
+    return call_creator('list_parameters')
+
+@mcp.tool()
+def creator_create_or_edit_basic(method: str, params_json: str, expected_project_path: str,
+                                  expected_node_json: str="") -> dict:
+    """Use safe existing Creator node/parameter commands; INOCHI_CREATOR_MUTATIONS=1 required."""
+    expected=json.loads(expected_node_json) if expected_node_json else None
+    return creator_simple_edit_guarded(method,json.loads(params_json),
+                                       expected_project_path=expected_project_path,
+                                       expected_node=expected)
+
 if __name__=='__main__':
     mcp.run()
