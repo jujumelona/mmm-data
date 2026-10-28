@@ -14,7 +14,7 @@ from rigging.contracts import (
     image_to_local, local_to_image, lineage,
 )
 from rigging.deform import tps_offsets, RigProposalError, propose_keyform
-from rigging.creator_bridge import call_creator, set_node_transform_verified, CreatorBridgeError
+from rigging.creator_bridge import call_creator, set_node_transform_verified, CreatorBridgeError, creator_probe, creator_manual_edit_context
 
 
 def specimen():
@@ -146,6 +146,37 @@ class TestCreatorGuard(unittest.TestCase):
                 set_node_transform_verified('123',translation=[1,0,0],expected={
                     'translation':[0,0,0],'rotation':[0,0,0],
                     'scale':[1,1],'parent_uuid':'root'})
+
+    def test_pivot_guard_cannot_be_disabled_by_expected_flag(self):
+        with patch('rigging.creator_bridge.call_creator',return_value={
+            'uuid':'123','translation':[0,0,0],'rotation':[0,0,0],
+            'scale':[1,1],'parent_uuid':'root'}):
+            with self.assertRaisesRegex(CreatorBridgeError,'pivot/children'):
+                set_node_transform_verified('123',translation=[1,0,0],expected={
+                    'translation':[0,0,0],'rotation':[0,0,0],
+                    'scale':[1,1],'parent_uuid':'root',
+                    'pivot_compensation_required':False})
+
+    def test_creator_probe_is_real_handshake(self):
+        with patch('rigging.creator_bridge.call_creator',side_effect=CreatorBridgeError('offline')):
+            self.assertFalse(creator_probe()['creator_connected'])
+        with patch('rigging.creator_bridge.call_creator',side_effect=lambda method,*a,**kw: {'ok':method}):
+            self.assertTrue(creator_probe()['creator_connected'])
+
+    def test_manual_snapshot_preserves_parent_chain_and_missing_fields(self):
+        node={'uuid':2,'translation':[3,4,0],'rotation':[0,0,0],
+              'scale':[1,1],'parent_uuid':1,'enabled':True,'zsort':4}
+        parent={'uuid':1,'translation':[0,0,0],'rotation':[0,0,0],
+                'scale':[1,1],'children':[{'uuid':2,'translation':[3,4,0],
+                'rotation':[0,0,0],'scale':[1,1],'zsort':4,'enabled':True}]}
+        def mock(method,params=None):
+            return {'get_node':node,'list_nodes':{'root':parent},
+                    'list_parameters':{'parameters':[]}}[method]
+        with patch('rigging.creator_bridge.call_creator',side_effect=mock):
+            context=creator_manual_edit_context('2')
+            self.assertEqual([a['uuid'] for a in context['ancestor_chain']],[1,2])
+            self.assertIn('actual_pivot',context['authoring_context_missing'])
+            self.assertFalse(context['safe_for_automatic_pivot_relocation'])
 
     def test_stale_live_creator_snapshot(self):
         with patch('rigging.creator_bridge.call_creator',return_value={

@@ -261,7 +261,8 @@ def atomic_write(path: Path, payload: bytes):
         t.write(payload)
         name=t.name
     try:
-        os.replace(name,path)
+        # Publish with atomic no-overwrite semantics: avoid os.replace race.
+        os.link(name,path)
     finally:
         if os.path.exists(name):os.unlink(name)
 

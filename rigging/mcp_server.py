@@ -15,7 +15,7 @@ except ImportError as exc:
 from native.inp08 import parse, inspect, extract_samples, encode, apply_keyform, atomic_write
 from rigging.contracts import validate_manifest, lineage, make_anchor, mesh_fingerprint
 from rigging.deform import propose_keyform
-from rigging.creator_bridge import call_creator, set_node_transform_verified
+from rigging.creator_bridge import call_creator, set_node_transform_verified, creator_probe, creator_manual_edit_context
 
 mcp=FastMCP('Inochi2D-AI-Rigging')
 
@@ -84,17 +84,37 @@ def rig_apply_approved_plan(path:str, plan_path:str, out_path:str, visual_review
     plan=json.loads(Path(plan_path).read_text(encoding='utf8'))
     if plan.get('format')!='inochi-authoring.keyform-plan.v1' or plan.get('source_sha256')!=hashlib.sha256(raw).hexdigest():
         raise ValueError('wrong or stale plan')
+    if plan.get('status')!='CANDIDATE_ONLY' or plan.get('algorithm')!='TPS-v1-explicit-anchored':
+        raise ValueError('unsupported or unverified proposal type')
+    if type(plan.get('source_anchor_count')) is not int or plan['source_anchor_count']<3:
+        raise ValueError('proposal lacks required source landmarks')
     import copy
     clone=copy.deepcopy(doc)
     patches=plan.get('patches')
     if not isinstance(patches,list) or not patches:raise ValueError('no patches')
-    for p in patches:apply_keyform(clone,p)
+    for p in patches:
+        if not isinstance(p,dict):raise ValueError('invalid patch object')
+        if p.get('allow_replace') or p.get('allow_unsafe'):
+            raise ValueError('MCP refuses authored keyform replacement or unsafe geometry overrides')
+        if set(p)-{'parameter','node_guid','key_index','vertex_offsets'}:
+            raise ValueError('unknown or privileged keyform patch field')
+        apply_keyform(clone,p)
     updated=encode(clone,tail)
     doc2,_,tail2=parse(updated)
     if doc2!=clone or tail!=tail2:raise ValueError('roundtrip failed')
     atomic_write(out,updated)
     return {'output':str(out),'applied':len(patches),'textures_preserved':True,
             'creator_render_tested':False,'requires_manual_creator_render':True}
+
+@mcp.tool()
+def creator_probe_connection()->dict:
+    """Perform a real localhost Creator bridge handshake; no mock success."""
+    return creator_probe()
+
+@mcp.tool()
+def creator_manual_edit_snapshot(uuid:str)->dict:
+    """Return live parent-chain and explicit missing authoring data."""
+    return creator_manual_edit_context(uuid)
 
 @mcp.tool()
 def creator_get_node(uuid:str)->dict:

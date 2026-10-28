@@ -43,6 +43,8 @@ class TestMCP(unittest.TestCase):
                     'rig_propose_keyform','rig_apply_approved_plan','creator_get_node','creator_list_nodes']:
             self.assertIn(key,reg)
         self.assertEqual(reg['rig_status']()['psd_to_full_rig'],'NOT implemented')
+        self.assertIn('creator_probe_connection',reg)
+        self.assertIn('creator_manual_edit_snapshot',reg)
 
     def test_inspect_validate_propose_apply_pipeline(self):
         doc,raw,manifest=specimen()
@@ -67,5 +69,17 @@ class TestMCP(unittest.TestCase):
             self.assertFalse(result['creator_render_tested'])
             with self.assertRaisesRegex(ValueError,'refusing output overwrite'):
                 self.server.rig_apply_approved_plan(str(model),str(output),str(new),True)
+            unsafe=json.loads(output.read_text());unsafe['patches'][0]['allow_unsafe']=True
+            bad=root/'bad.json';bad.write_text(json.dumps(unsafe))
+            with self.assertRaisesRegex(ValueError,'unsafe geometry'):
+                self.server.rig_apply_approved_plan(str(model),str(bad),str(root/'bad.inx'),True)
+            unsafe['patches'][0].pop('allow_unsafe');unsafe['patches'][0]['allow_replace']=True
+            bad.write_text(json.dumps(unsafe))
+            with self.assertRaisesRegex(ValueError,'keyform replacement'):
+                self.server.rig_apply_approved_plan(str(model),str(bad),str(root/'bad.inx'),True)
+            unsafe['patches'][0].pop('allow_replace');unsafe['status']='APPROVED_BY_AI'
+            bad.write_text(json.dumps(unsafe))
+            with self.assertRaisesRegex(ValueError,'unverified proposal'):
+                self.server.rig_apply_approved_plan(str(model),str(bad),str(root/'bad.inx'),True)
 
 if __name__=='__main__':unittest.main()
