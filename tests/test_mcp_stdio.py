@@ -43,7 +43,7 @@ class RealMCPStdioTest(unittest.TestCase):
                     content = next(item.text for item in response.content if item.type == 'text')
                     value = json.loads(content)
                     self.assertEqual(value['psd_to_full_rig'], 'NOT implemented')
-                    self.assertEqual(value['creator_live_mesh_and_binding_edit'], 'NOT implemented')
+                    self.assertIn('native in-memory API NOT implemented', value['creator_live_mesh_and_binding_edit'])
         asyncio.run(verify())
 
 
